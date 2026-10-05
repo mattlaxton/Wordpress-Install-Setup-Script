@@ -4,7 +4,7 @@ A bash script to install WordPress with Nginx, MariaDB, and the distribution's d
 
 It can start from an empty server or add another site next to ones that are already there. Each site gets its own directory, Nginx config, database, and database user, all named from the domain. It asks before installing packages, changing PHP limits that are no longer the distribution defaults, removing the default Nginx site, or replacing an existing directory.
 
-Certbot is optional. Both Debian and Ubuntu install `certbot` and `python3-certbot-nginx` from apt. On Ubuntu, if those packages are missing because universe is disabled, the script asks before enabling it. At the end, if snapd is installed, the script lists the installed snaps and asks before removing snapd.
+Certbot is optional. Both Debian and Ubuntu install `certbot` and `python3-certbot-nginx` from apt. On Ubuntu, if those packages are missing because universe is disabled, the script asks before enabling it. At the end, if snapd is installed, the script lists any installed snaps and asks the user if snap should be removed.
 
 ---
 
