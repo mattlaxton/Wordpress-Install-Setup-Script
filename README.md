@@ -1,85 +1,72 @@
 # Wordpress-Install-Setup-Script
-A comprehensive Bash script to install a a running instance of Wordpress and all required software.
 
-# WordPress One-Click Setup Script (Debian/Ubuntu)
+A bash script to install WordPress with Nginx, MariaDB, and the distribution's default PHP on Debian and Ubuntu.
 
-A clean, minimal, and production-ready bash script to deploy a fresh WordPress site with dedicated Nginx configuration in under 5 minutes.
+It can start from an empty server or add another site next to ones that are already there. Each site gets its own directory, Nginx config, database, and database user, all named from the domain. It asks before installing packages, changing PHP limits that are no longer the distribution defaults, removing the default Nginx site, or replacing an existing directory.
 
-This is designed to take a fresh server or VM from empty to running WordPress with minimal effort. This will install all necessary software to run WordPress and nothing more. It sets sane defaults for PHP and MariaDB that are typical of most installations, secures the MariaDB install, uses a strong DB password, and is transparent during the process. It doesn't touch any other system files outside of it's scope.
-
-If you're unsure about this script, have your favorite AI look it over and ask it it's dangerous in any way.
-
-* Snap install for Certbot will not run on a non-Ubuntu OS.
+Certbot is optional. Ubuntu installs it with Snap. Debian installs `certbot` and `python3-certbot-nginx` from apt.
 
 ---
 
 ## Features
 
-- **Fully automated** WordPress + Nginx + MariaDB + PHP 8.3 setup
-- Dedicated per-site Nginx config (no polluting default site)
-- Secure random database password
-- Optimized PHP settings (64M upload, 256M memory, etc.)
-- Proper file permissions
-- Optional Certbot (Let's Encrypt) installation via Snap
-- Safe to re-run (idempotent)
-- Clean, readable output with color-coded logging
+- WordPress, Nginx, MariaDB, and the distribution's default PHP
+- One Nginx config per domain (`example.com.conf`)
+- Database and user derived from the domain (`example_com`)
+- Refuses to create that database or user when they already exist, unless this site's `wp-config.php` already uses them
+- Shows the default Nginx site and `/var/www/html` and asks before removing them
+- PHP upload, post, and memory limits raised only when they are still at the distribution defaults, otherwise asks
+- Optional Certbot (Snap on Ubuntu, apt on Debian)
+- Re-run keeps the existing `wp-config.php` password and asks before replacing site files
 
 ---
 
 ## Requirements
 
-- Debian Linux or Ubuntu 24.04 (or newer)
+- Debian, or Ubuntu 24.04 or newer
 - Root or sudo access
-- Fresh server (recommended)
 
 ---
 
-## Quick Install & Run
+## Run
 
 ```bash
-# 1. Download the script (Clone this repo)
-$ git clone https://github.com/mattlaxton/Wordpress-Install-Setup-Script.git
-
-# 2. Make executable
-$ cd Wordpress-Install-Setup-Script
-$ chmod +x setup-wp-1.x.sh
-
-# 3. Run it
-$ sudo ./setup-wp-v1.x.sh
-or
-$ sudo bash setup-wp-v1.x.sh
+git clone https://github.com/mattlaxton/Wordpress-Install-Setup-Script.git
+cd Wordpress-Install-Setup-Script
+chmod +x setup-wp-v1.0.sh
+sudo ./setup-wp-v1.0.sh
 ```
-### What the Script Does
 
-1. Installs required packages (Nginx, MariaDB, PHP 8.3 + extensions)
-2. Set your wordpress directory under /var/www/ (you decide)
-3. Secures MariaDB and creates wordpress database + wp_user
-4. Downloads and extracts latest WordPress
-5. Creates secure wp-config.php with strong salts
-6. Sets correct ownership (www-data) and permissions
-7. Creates a dedicated Nginx site config
-8. Restarts services
-9. Shows final credentials and next steps
+### What it does
 
-### Example Output Summary
+1. Asks for the domain and the directory under `/var/www/` (default is the domain)
+2. Lists packages that are not already installed and waits for approval
+3. Sets PHP limits, or shows the current values and asks when they were already changed
+4. Asks before replacing an existing directory, then shows the default Nginx site and asks whether to remove it and `/var/www/html`
+5. Writes the new Nginx site, runs `nginx -t`, and reloads only when the test passes
+6. Connects to MariaDB (asks for the root password when socket login does not work) and creates this site's database and user after checking they are free
+7. Downloads WordPress, writes `wp-config.php`, and sets `www-data` ownership
+8. Prints the database password and the Certbot command when Certbot was installed
+
+### Example summary
+
 ```
-WordPress Location : /var/www/html
-Access URL         : http://your-domain-or-ip
-Nginx Config       : /etc/nginx/sites-available/your-domain.conf
-Database           : wordpress
-DB User            : wp_user
+WordPress Location : /var/www/example.com
+Access URL         : http://example.com
+Nginx Config       : /etc/nginx/sites-available/example.com.conf
+Database           : example_com
+DB User            : example_com
 DB Password        : XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
-### Recommended Next Steps
 
-After running the script:
+### Next steps
 
-1. Open the site in browser to complete WordPress installation
-2. (Optional) Enable HTTPS on Ubuntu:
+1. Open the site and finish the WordPress installer.
+2. If you installed Certbot:
+
+```bash
+sudo certbot --nginx -d example.com
 ```
-sudo certbot --nginx -d yourdomain.com
-```
-Thats it...simple.
 
 License
 MIT License — Free to use, modify, and deploy on as many servers as you want.
