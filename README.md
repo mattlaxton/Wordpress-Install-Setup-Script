@@ -67,7 +67,7 @@ DB Password        : XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```bash
 sudo certbot --nginx -d example.com
 ```
-Once the site it up [Reaver Backup](https://reaverbackup.com), can handle the WordPress backup conundrum for you.
+Once the site it up, [Reaver Backup](https://reaverbackup.com) can handle the WordPress backup conundrum for you.
 
 License
 MIT License — Free to use, modify, and deploy on as many servers as you want.
