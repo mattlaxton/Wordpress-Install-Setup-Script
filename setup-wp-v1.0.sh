@@ -63,11 +63,7 @@ DB_USER="${DB_ID}"
 CONFIG_FILE="/etc/nginx/sites-available/${DOMAIN}.conf"
 
 . /etc/os-release
-if [[ "${ID:-}" == "ubuntu" ]]; then
-    read -p "$(echo -e "${YELLOW}Install Certbot via Snap? (y/N):${NC} ")" CERTBOT_CHOICE
-else
-    read -p "$(echo -e "${YELLOW}Install Certbot from apt (certbot, python3-certbot-nginx)? (y/N):${NC} ")" CERTBOT_CHOICE
-fi
+read -p "$(echo -e "${YELLOW}Install Certbot from apt (certbot, python3-certbot-nginx)? (y/N):${NC} ")" CERTBOT_CHOICE
 INSTALL_CERTBOT=false
 [[ "$CERTBOT_CHOICE" =~ ^[Yy]$ ]] && INSTALL_CERTBOT=true
 
@@ -185,29 +181,27 @@ section_done
 
 # === Certbot ===
 if [ "$INSTALL_CERTBOT" = true ]; then
-    if [[ "${ID:-}" == "ubuntu" ]]; then
-        if ! command -v snap >/dev/null 2>&1; then
-            log_warn "snap is not installed. Skipping Certbot. Install snapd, then run: sudo snap install --classic certbot"
-            INSTALL_CERTBOT=false
-        else
-            log_info "Installing official Certbot via Snap..."
-            sudo snap install core
-            sudo snap refresh core
-            sudo snap install --classic certbot
-            sudo ln -sf /snap/bin/certbot /usr/bin/certbot
-            log_success "Certbot installed"
-            section_done
+    if ! apt-cache show certbot >/dev/null 2>&1 || ! apt-cache show python3-certbot-nginx >/dev/null 2>&1; then
+        if [[ "${ID:-}" == "ubuntu" ]] && ! grep -RIsEq --exclude='*.save' '(^|[[:space:]])universe([[:space:]]|$)' /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then
+            read -p "$(echo -e "${YELLOW}Ubuntu universe is not enabled. Certbot comes from there. Enable universe? (y/N):${NC} ")" ENABLE_UNIVERSE_CERTBOT
+            if [[ "${ENABLE_UNIVERSE_CERTBOT}" =~ ^[Yy]$ ]]; then
+                if ! command -v add-apt-repository >/dev/null 2>&1; then
+                    sudo apt-get install -y software-properties-common
+                fi
+                sudo add-apt-repository -y universe
+            else
+                log_warn "Leaving universe disabled. Certbot will not be installed."
+            fi
         fi
+    fi
+    if apt-cache show certbot >/dev/null 2>&1 && apt-cache show python3-certbot-nginx >/dev/null 2>&1; then
+        log_info "Installing Certbot from apt..."
+        sudo apt-get install -y certbot python3-certbot-nginx
+        log_success "Certbot installed"
+        section_done
     else
-        if apt-cache show certbot >/dev/null 2>&1 && apt-cache show python3-certbot-nginx >/dev/null 2>&1; then
-            log_info "Installing Certbot from apt..."
-            sudo apt-get install -y certbot python3-certbot-nginx
-            log_success "Certbot installed"
-            section_done
-        else
-            log_warn "certbot or python3-certbot-nginx is not in the enabled apt repositories. Skipping Certbot."
-            INSTALL_CERTBOT=false
-        fi
+        log_warn "certbot or python3-certbot-nginx is not in the enabled apt repositories. Skipping Certbot."
+        INSTALL_CERTBOT=false
     fi
 fi
 
@@ -544,6 +538,32 @@ if [[ -f "${WP_PATH}/wp-config.php" ]]; then
     sudo chmod 640 "${WP_PATH}/wp-config.php"
 fi
 section_done
+
+# === snapd ===
+if dpkg-query -W -f='${Status}' snapd 2>/dev/null | grep -q 'install ok installed'; then
+    echo -e "${YELLOW}snapd is installed.${NC}"
+    if command -v snap >/dev/null 2>&1; then
+        echo -e "${YELLOW}Installed snaps:${NC}"
+        snap list 2>/dev/null | sed 's/^/  /' || true
+    fi
+    read -p "$(echo -e "${YELLOW}Remove snapd if you do not use it for anything else? (y/N):${NC} ")" REMOVE_SNAPD
+    if [[ "${REMOVE_SNAPD}" =~ ^[Yy]$ ]]; then
+        if command -v snap >/dev/null 2>&1; then
+            for _ in 1 2 3 4 5; do
+                mapfile -t SNAP_NAMES < <(snap list 2>/dev/null | awk 'NR>1 {print $1}')
+                [[ ${#SNAP_NAMES[@]} -eq 0 ]] && break
+                for snap_name in "${SNAP_NAMES[@]}"; do
+                    sudo snap remove "${snap_name}" >/dev/null 2>&1 || true
+                done
+            done
+        fi
+        sudo systemctl stop snapd.socket snapd.service 2>/dev/null || true
+        sudo apt-get purge -y snapd
+        log_success "snapd removed"
+    else
+        log_info "Leaving snapd installed"
+    fi
+fi
 
 # === Final Summary ===
 echo -e "\n${GREEN}============================================================${NC}"
